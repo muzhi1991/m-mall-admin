@@ -39,7 +39,8 @@ m-mall-admin/
      |- ...
   |-apidoc.json               # 接口文档配置
   |-app.js                    # 入口文件
-  |-config.js                 # 配置文件
+  |-config.js                 # 配置文件--默认是docker容器版本
+  |-config-local.js           # 配置文件--本地运行服务的版本，如果需要重命名替换config.js
   |-...
 ```
 
@@ -85,14 +86,14 @@ nvm来管理node版本，brew install nvm
 * nvm ls 查看当前的node版本
 * nvm install 6.9 按照6.9.x的最新版本
 
-** 这个小程序系统用了node 6.9.5，使用node 7回报buffer相关api的错误。**
+> ** 这个小程序系统用了node 6.9.5，使用node 7会报buffer相关api的错误。**
 
 ### 后端服务：
 ```
 1. 安装 `Node.js[必须]` `MongoDB[必须]` `Redis[必须]`
 2. 启动 MongoDB 和 Redis
 3. 进入根目录下执行 `npm install` 安装项目所需依赖包
-3. 执行 `npm start` 启动服务
+3. 如果本地执行，修改`config.js`（使用`config-local.js` 替换）执行 `npm start` 启动服务
 4. 打开前端小程序，api可以使用
 ```
 
@@ -114,6 +115,25 @@ nvm来管理node版本，brew install nvm
 # 跑测试用例
 npm test
 ```
+
+## Docker环境部署
+### 安装nginx && ssl support
+直接用hyperapp安装（也可自行安装，注意开启VPS的80和445端口）:
+* nginx-proxy：一个第三方镜像（jwilder/nginx-proxy），自动化配置nginx安装域名转发.
+* Nginx SSL Support：快速支持https（使用letsencrypt证书）
+
+### 查看&&修改配置文件
+docker相关的配置文件：
+* Dockerfile：生成web镜像，是我们nodejs的项目镜像的构建编译，如果构建成功，一般不用修改。
+* docker-compose.yml：项目编排文件，启动了redis，mongo。同时**设置了域名的转发和ssl证书**。按实际情况修改。
+
+### 运行
+* 启动安装好的nginx-proxy && Nginx-SSL-Support
+* 在根目录下运行`docker-compose up -d`（如果需要前台运行，去掉-d参数,，关注日志输出）
+* 可选：如果需要单独生成nodejs的镜像，运行`docker build -t muzhi1991/m-mall-admin .`（注意最后的点）
+* 可选：如果修改代码后运行程序，`docker-compose up --build -d`回强制构建镜像
+
+> 注意：使用docker images可能输出很多none的镜像，这是使用docker build/docker-compose build后可能回保留之前的旧镜像，可以使用命令`docker rmi $(docker images -qa -f 'dangling=true')` 批量删除
 
 ##  贡献
 

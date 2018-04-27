@@ -1,0 +1,30 @@
+version: "3"
+
+services:
+    # webapp需要打开jwilder/nginx-proxy以及jrcs/letsencrypt-nginx-proxy-companion开启https验证，下面的环境变量就是配置
+    webapp:
+        build: .
+        #network_mode: bridge
+        depends_on:
+            - mongo
+            - redis
+        expose:
+            - "3000"
+        environment:
+            - VIRTUAL_HOST=api-mall.limuzhi.com
+            - VIRTUAL_PORT=3000
+            - LETSENCRYPT_HOST=api-mall.limuzhi.com
+            - LETSENCRYPT_EMAIL=muzhi1991@gmail.com
+        networks:
+            - default
+            - nginx-proxy
+    redis:
+        image: redis
+    mongo:
+        image: mongo
+
+# 外部创建nginx-proxy网络，并把nginx-proxy容器加入该网络
+networks:
+    nginx-proxy:
+        external:
+            name: nginx-proxy
