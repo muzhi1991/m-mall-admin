@@ -126,6 +126,7 @@ npm test
 docker相关的配置文件：
 * Dockerfile：生成web镜像，是我们nodejs的项目镜像的构建编译，如果构建成功，一般不用修改。
 * docker-compose.yml：项目编排文件，启动了redis，mongo。同时**设置了域名的转发和ssl证书**。按实际情况修改。
+* Dockerfile-ubuntu：一个基于ubuntu的版本，生成镜像比较大，仅仅备份一下。
 
 ### 运行
 * 启动安装好的nginx-proxy && Nginx-SSL-Support
