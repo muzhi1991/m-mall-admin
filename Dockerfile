@@ -37,6 +37,7 @@ RUN npm run build
 # 切换回主目录
 WORKDIR /app
 EXPOSE 3000
+
 # 运行app.js
 CMD ["npm", "start"]
 
