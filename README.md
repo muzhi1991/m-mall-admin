@@ -136,6 +136,25 @@ docker相关的配置文件：
 
 > 注意：使用docker images可能输出很多none的镜像，这是使用docker build/docker-compose build后可能回保留之前的旧镜像，可以使用命令`docker rmi $(docker images -qa -f 'dangling=true')` 批量删除
 
+## Debug
+如果需要debug，主要有两种方式
+
+### 本地调试
+线下开发的Debug：在vscode中运行debug（参考下图），
+  ![](https://ws2.sinaimg.cn/large/006tKfTcly1fr9ta052xkj30fl07hglh.jpg)
+
+> 相关配置已经写入`.vscode/launch.json`和`.vscode/tasks.josn`中（sourcemap文件会生成在本地`.compiled/`文件夹中）。
+
+### 远程调试
+
+在线上容器Docker中Debug：使用Nodejs的远程调试功能，
+1. 请在`docker-compose.yml`中打开`command: [npm, run, debug]`
+2. 运行`docker-compose restart webapp`，重启启动web应用
+3. 打开容器日志`docker logs --tail 30 -f m-mall-admin_webapp_1`
+4. 根据日志提示在本地chrome浏览器中打开连接，注意把`127.0.0.1`换成你的开发机ip
+
+> 配置在`package.json`的debug命令中。一个问题：这里没有生成sourcemap。
+
 ##  贡献
 
 有任何意见或建议都欢迎提 issue
