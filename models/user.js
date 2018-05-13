@@ -12,6 +12,10 @@ const Schema = mongoose.Schema({
 	email    : String,
 	nickname : String,
 	gender   : String,
+	admin	 : {
+		type	: Boolean,
+		default : false
+	},
 	birthday : Date,
 	loginAttempts: { 
 		type    : Number, 

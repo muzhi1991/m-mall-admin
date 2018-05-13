@@ -44,6 +44,7 @@
   },
   "scripts": {
     "start": "babel-node ./bin/www",
+    "compile": "babel ./ --ignore=public/node_modules,node_modules,public --out-dir .compiled --source-maps",
     "test": "./node_modules/.bin/mocha -t 10000 --compilers js:babel-core/register --recursive --reporter mochawesome",
     "apidoc": "./node_modules/.bin/apidoc -i controllers/ -o public/apidoc",
     "debug": "babel-node bin/www --inspect --debug-brk --nolazy ./bin/www"

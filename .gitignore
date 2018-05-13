@@ -111,3 +111,10 @@ npm-debug.log
 nbproject
 .idea
 .node_history
+
+## 代码提示配置
+typings/
+jsconfig.json
+
+# 调试时产生的sourcemap文件路径
+.compiled

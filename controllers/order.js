@@ -84,11 +84,13 @@ class Ctrl{
 	getAll(req, res, next) {
 		const status = req.query.type
 
+
 		const query = {
 			user  : req.user._id,
 			status: status,
 		}
-
+		// 管理员用户获得所有订单
+		req.user.admin && delete query.user
 		status === 'all' && delete query.status
 
 		const opts = {

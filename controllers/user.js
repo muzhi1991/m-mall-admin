@@ -5,11 +5,11 @@ import WXBizDataCrypt from '../common/WXBizDataCrypt'
 import proxy from '../proxy'
 import jwtauth from '../middlewares/jwtauth'
 
-class Ctrl{
+class Ctrl {
 	constructor(app) {
 		Object.assign(this, {
-			app, 
-			model: proxy.user, 
+			app,
+			model: proxy.user,
 		})
 
 		this.init()
@@ -43,7 +43,7 @@ class Ctrl{
 	 */
 	requestAsync(url) {
 		return new Promise((reslove, reject) => {
-			request({url: url}, (err, res, body) => {
+			request({ url: url }, (err, res, body) => {
 				if (err) return reject(err)
 				return reslove(body)
 			})
@@ -87,30 +87,34 @@ class Ctrl{
 	 */
 	wechatSignUp(req, res, next) {
 		const code = req.body.code
+		// 微信登录默认密码123456（这个值没有用）
 		const body = {
-			username: null, 
-			password: res.jwt.setMd5('123456'), 
+			username: null,
+			password: res.jwt.setMd5('123456'),
 		}
 
 		this.getSessionKey(code)
-		.then(doc => {
-			doc = JSON.parse(doc)
-			if (doc && doc.errmsg) return res.tools.setJson(doc.errcode, doc.errmsg)
-			if (doc && doc.openid) {
-				body.username = doc.openid
-				return this.model.findByName(doc.openid)
-			}
-		})
-		.then(doc => {
-			if (!doc) return this.model.newAndSave(body)
-			if (doc && doc._id) return res.tools.setJson(1, '用户名已存在')
-		})
-		.then(doc => {
-			if (doc && doc._id) return res.tools.setJson(0, '注册成功', {
-				token: res.jwt.setToken(doc._id)
+			.then(doc => {
+				doc = JSON.parse(doc)
+				if (doc && doc.errmsg) return res.tools.setJson(doc.errcode, doc.errmsg)
+				if (doc && doc.openid) {
+					body.username = doc.openid // 注意：用户名是openid
+					return this.model.findByName(doc.openid) // 查询用户
+				}
 			})
-		})
-		.catch(err => next(err))
+			.then(doc => {
+				if (!doc) {
+					body.admin = false
+					return this.model.newAndSave(body) // 新建用户
+				}
+				if (doc && doc._id) return res.tools.setJson(1, '用户名已存在')
+			})
+			.then(doc => {
+				if (doc && doc._id) return res.tools.setJson(0, '注册成功', {
+					token: res.jwt.setToken(doc._id)
+				})
+			})
+			.catch(err => next(err))
 	}
 
 	/**
@@ -142,18 +146,18 @@ class Ctrl{
 		const code = req.body.code
 
 		this.getSessionKey(code)
-		.then(doc => {
-			doc = JSON.parse(doc)
-			if (doc && doc.errmsg) return res.tools.setJson(doc.errcode, doc.errmsg)
-			if (doc && doc.openid) return this.model.findByName(doc.openid)
-		})
-		.then(doc => {
-			if (!doc) return res.tools.setJson(1, '用户名不存在')
-			if (doc && doc._id) return res.tools.setJson(0, '登录成功', {
-				token: res.jwt.setToken(doc._id)
+			.then(doc => {
+				doc = JSON.parse(doc)
+				if (doc && doc.errmsg) return res.tools.setJson(doc.errcode, doc.errmsg) // 这里按照微信文档，返回40029
+				if (doc && doc.openid) return this.model.findByName(doc.openid) // 查询用户，用户名是openid
 			})
-		})
-		.catch(err => next(err))
+			.then(doc => {
+				if (!doc) return res.tools.setJson(1, '用户名不存在') // 后续客户端回调用wechatSignUp
+				if (doc && doc._id) return res.tools.setJson(0, '登录成功', {
+					token: res.jwt.setToken(doc._id) // 更新token
+				})
+			})
+			.catch(err => next(err))
 	}
 
 
@@ -195,16 +199,16 @@ class Ctrl{
 		const appid = config.wechat.appid
 
 		this.getSessionKey(code)
-		.then(doc => {
-			doc = JSON.parse(doc)
-			if (doc.errmsg) return res.tools.setJson(doc.errcode, doc.errmsg)
-			if (doc.openid) {
-				const pc = new WXBizDataCrypt(appid, doc.session_key)
-				const data = pc.decryptData(encryptedData , iv)
-				return res.tools.setJson(0, '调用成功', data)
-			}
-		})
-		.catch(err => next(err))
+			.then(doc => {
+				doc = JSON.parse(doc)
+				if (doc.errmsg) return res.tools.setJson(doc.errcode, doc.errmsg)
+				if (doc.openid) {
+					const pc = new WXBizDataCrypt(appid, doc.session_key)
+					const data = pc.decryptData(encryptedData, iv)
+					return res.tools.setJson(0, '调用成功', data)
+				}
+			})
+			.catch(err => next(err))
 	}
 
 	/**
@@ -215,12 +219,13 @@ class Ctrl{
 		const password = config.superAdmin.password
 
 		this.model.findByName(username)
-		.then(doc => {
-			if (!doc) return this.model.newAndSave({
-				username: username, 
-				password: jwt.setMd5(password), 
+			.then(doc => {
+				if (!doc) return this.model.newAndSave({
+					username: username,
+					password: jwt.setMd5(password),
+					admin: true
+				})
 			})
-		})
 	}
 
 	/**
@@ -252,17 +257,17 @@ class Ctrl{
 		const password = req.body.password
 
 		if (!username || !password) return res.tools.setJson(1, '用户名或密码错误')
-		
+
 		this.model.findByName(username)
-		.then(doc => {
-			if (!doc) return this.model.newAndSave({
-				username: username, 
-				password: res.jwt.setMd5(password)
+			.then(doc => {
+				if (!doc) return this.model.newAndSave({
+					username: username,
+					password: res.jwt.setMd5(password)
+				})
+				return res.tools.setJson(1, '用户名已存在')
 			})
-			return res.tools.setJson(1, '用户名已存在')
-		})
-		.then(doc => res.tools.setJson(0, '注册成功'))
-		.catch(err => next(err))
+			.then(doc => res.tools.setJson(0, '注册成功'))
+			.catch(err => next(err))
 	}
 
 	/**
@@ -294,28 +299,30 @@ class Ctrl{
 	signIn(req, res, next) {
 		const username = req.body.username
 		const password = req.body.password
-		
-		if (!username || !password) return res.tools.setJson(1, '用户名或密码错误')	
+
+		if (!username || !password) return res.tools.setJson(1, '用户名或密码错误')
+		// 验证码逻辑：如果是app调用这里的req.session.code没有值（因为没有调用/common/captcha接口）
+		// fixme: 这里显然可以绕过
 		if (req.body.code !== req.session.code) return res.tools.setJson(1, '验证码错误')
 
 		this.model.model.getAuthenticated(username, password)
-		.then(doc => {
-			switch (doc) {
-	            case 0:
-	            	res.tools.setJson(1, '用户名或密码错误')
-	            	break
-	            case 1:
-	                res.tools.setJson(1, '用户名或密码错误')
-	                break
-	            case 2:
-	                res.tools.setJson(1, '账号已被锁定，请等待两小时解锁后重新尝试登录')
-	                break
-	            default: res.tools.setJson(0, '登录成功', {
-					token: res.jwt.setToken(doc._id)
-				})
-	        }
-		})
-		.catch(err => next(err))	
+			.then(doc => {
+				switch (doc) {
+					case 0:
+						res.tools.setJson(1, '用户名或密码错误')
+						break
+					case 1:
+						res.tools.setJson(1, '用户名或密码错误')
+						break
+					case 2:
+						res.tools.setJson(1, '账号已被锁定，请等待两小时解锁后重新尝试登录')
+						break
+					default: res.tools.setJson(0, '登录成功', {
+						token: res.jwt.setToken(doc._id, { admin: doc.admin }) // 管理员标记
+					})
+				}
+			})
+			.catch(err => next(err))
 	}
 
 	/**
@@ -343,7 +350,7 @@ class Ctrl{
 	signOut(req, res, next) {
 		if (req.user) {
 			new jwtauth().expireToken(req.headers)
-			delete req.user	
+			delete req.user
 			delete this.app.locals.token
 			return res.tools.setJson(0, '登出成功')
 		}
@@ -378,17 +385,17 @@ class Ctrl{
 	resetPassword(req, res, next) {
 		const oldpwd = req.body.oldpwd
 		const newpwd = req.body.newpwd
-			
+
 		if (oldpwd && newpwd) {
 			this.model.findByName(req.user.username)
-			.then(doc => {
-				if (!doc) return res.tools.setJson(1, '用户不存在或已删除')
-				if (doc.password !== res.jwt.setMd5(oldpwd)) return res.tools.setJson(1, '密码错误')
-				doc.password = res.jwt.setMd5(newpwd)
-				return doc.save()
-			})
-			.then(doc => res.tools.setJson(0, '更新成功'))
-			.catch(err => next(err))
+				.then(doc => {
+					if (!doc) return res.tools.setJson(1, '用户不存在或已删除')
+					if (doc.password !== res.jwt.setMd5(oldpwd)) return res.tools.setJson(1, '密码错误')
+					doc.password = res.jwt.setMd5(newpwd)
+					return doc.save()
+				})
+				.then(doc => res.tools.setJson(0, '更新成功'))
+				.catch(err => next(err))
 		}
 	}
 
@@ -423,19 +430,19 @@ class Ctrl{
 	 */
 	saveInfo(req, res, next) {
 		this.model.findByName(req.user.username)
-		.then(doc => {
-			if (!doc) return res.tools.setJson(1, '用户不存在或已删除')
+			.then(doc => {
+				if (!doc) return res.tools.setJson(1, '用户不存在或已删除')
 
-			for(let key in req.body) {
-				doc[key] = req.body[key]
-			}
+				for (let key in req.body) {
+					doc[key] = req.body[key]
+				}
 
-			doc.update_at = Date.now()
+				doc.update_at = Date.now()
 
-			return doc.save()
-		})
-		.then(doc => res.tools.setJson(0, '更新成功', doc))
-		.catch(err => next(err))
+				return doc.save()
+			})
+			.then(doc => res.tools.setJson(0, '更新成功', doc))
+			.catch(err => next(err))
 	}
 
 	/**
@@ -462,11 +469,11 @@ class Ctrl{
 	 */
 	getInfo(req, res, next) {
 		this.model.findByName(req.user.username)
-		.then(doc => {
-			if (!doc) return res.tools.setJson(1, '用户不存在或已删除')
-			return res.tools.setJson(0, '调用成功', doc)
-		})
-		.catch(err => next(err))
+			.then(doc => {
+				if (!doc) return res.tools.setJson(1, '用户不存在或已删除')
+				return res.tools.setJson(0, '调用成功', doc)
+			})
+			.catch(err => next(err))
 	}
 }
 

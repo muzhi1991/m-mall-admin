@@ -30,6 +30,7 @@ class Middlewares{
 	verifyToken(req, res, next) {
 		const token = this.getToken(req.headers)
 
+		// todo：非常没有意义，不符合jwt思想，现在失效时间1分钟，建议不读取redis&&db
 		this.redisClient.get(token, (err, reply) => {
 			if (err) return res.tools.setJson(500, '服务器错误')
 			if (reply) return res.tools.setJson(401, '无权访问')
