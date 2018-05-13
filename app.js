@@ -18,20 +18,21 @@ import logger from './common/logger'
 import tools from './middlewares/tools'
 import jwtauth from './middlewares/jwtauth'
 import routes from './routes'
+import CustomError from './common/error'
 
-const app          = express()
-const mkdirsSync   = mkdirs.mkdirsSync
+const app = express()
+const mkdirsSync = mkdirs.mkdirsSync
 const SessionStore = sessionMongoose(connect)
-const mongodb      = new mongo(app, config)
-const store        = new SessionStore({ url: mongodb.dblink })
-const auth         = new jwtauth()
+const mongodb = new mongo(app, config)
+const store = new SessionStore({ url: mongodb.dblink })
+const auth = new jwtauth()
 
 // 判断文件夹是否存在, 若不存在则创建之
 mkdirsSync(config.upload.tmp)
 mkdirsSync(config.upload.path)
 
 // view engine setup
-app.set('views', path.join(__dirname, 'views') )
+app.set('views', path.join(__dirname, 'views'))
 app.set('view engine', 'hbs')
 app.engine('hbs', exphbs({
 	layoutsDir: path.join(__dirname, 'views/layouts/'),
@@ -43,7 +44,7 @@ app.engine('hbs', exphbs({
 }))
 
 app.use(favicon(__dirname + '/public/favicon.ico'))
-app.use(log4js.connectLogger(logger('normal'), {level:'auto', format:':method :url :status'}))
+app.use(log4js.connectLogger(logger('normal'), { level: 'auto', format: ':method :url :status' }))
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(express.static(path.join(__dirname, 'public')))
@@ -64,7 +65,7 @@ app.use(session({
 app.use(cors())
 
 app.use((req, res, next) => {
-	if(req.path.indexOf('/api') === -1) {
+	if (req.path.indexOf('/api') === -1) {
 		return res.render('index')
 	}
 	return next()
@@ -78,7 +79,7 @@ app.use((req, res, next) => {
 // custom middleware
 app.use(/\/api/, tools)
 app.use(/^((?!sign\/up|sign\/in|captcha).)+$/, [
-	jwt({ secret: config.secret}), 
+	jwt({ secret: config.secret }),
 	auth.verifyToken.bind(auth)
 ])
 
@@ -100,25 +101,36 @@ app.use((req, res, next) => {
 // will print stacktrace
 if (app.get('env') === 'development') {
 	app.use((err, req, res, next) => {
-		console.log(err)
-		res.status(err.status || 500)
-		res.render('error', {
-			layout: false,
-			message: err.message,
-			error: err
-		})
+		if (err instanceof CustomError) {
+			let erroCode = err.errorCode || 1
+			return res.tools.setJson(erroCode, err.message)
+		} else {
+			console.log(err)
+			res.status(err.status || 500)
+			res.render('error', {
+				layout: false,
+				message: err.message,
+				error: err
+			})
+		}
 	})
 }
 
 // production error handler
 // no stacktraces leaked to user
 app.use((err, req, res, next) => {
-	res.status(err.status || 500)
-	res.render('error', {
-		layout: false,
-		message: err.message,
-		error: err
-	})
+	if (err instanceof CustomError) {
+		let erroCode = err.errorCode || 1
+		return res.tools.setJson(erroCode, err.message)
+	} else {
+		res.status(err.status || 500)
+		res.render('error', {
+			layout: false,
+			message: err.message,
+			error: err
+		})
+	}
+
 })
 
 // app.listen(3000, '0.0.0.0')

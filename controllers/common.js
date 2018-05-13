@@ -6,6 +6,7 @@ import cheerio from 'cheerio'
 import captchapng from 'captchapng'
 import proxy from '../proxy'
 import config from '../config'
+import CustomError from '../common/error'
 
 const fs = bluebird.promisifyAll(FS)
 
@@ -149,7 +150,8 @@ class Ctrl{
 		let filepath = null
 		this.upload.findById(req.params.id)
 		.then(doc => {
-			if (!doc) return res.tools.setJson(1, '资源不存在或已删除')
+			// bugfix
+			if (!doc) throw new CustomError("资源不存在或已删除") //return res.tools.setJson(1, '资源不存在或已删除')
 			filepath = 'public/' + doc.path
 			return doc.remove()
 		})

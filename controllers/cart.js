@@ -1,4 +1,5 @@
 import proxy from '../proxy'
+import CustomError from '../common/error'
 
 class Ctrl{
 	constructor(app) {
@@ -216,7 +217,8 @@ class Ctrl{
 			const goods = doc[0]
 			const cart  = doc[1]
 
-			if (!goods) return res.tools.setJson(1, '资源不存在或已删除')
+			// bugfix
+			if (!goods) throw new CustomError('资源不存在或已删除')
 
 			if (!cart) {
 				body.amount = goods.price
@@ -288,7 +290,8 @@ class Ctrl{
 
 		this.model.findOneAsync(query)
 		.then(doc => {
-			if (!doc) return res.tools.setJson(1, '资源不存在或已删除')
+			// bugfix 
+			if (!doc) throw new CustomError('资源不存在或已删除')
 			doc.total = Math.abs(body.total)
 			doc.totalAmount = Math.abs(doc.amount * doc.total)
 			return doc.save()

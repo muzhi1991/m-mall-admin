@@ -4,6 +4,7 @@ import jwt from '../common/jwtauth'
 import WXBizDataCrypt from '../common/WXBizDataCrypt'
 import proxy from '../proxy'
 import jwtauth from '../middlewares/jwtauth'
+import CustomError from '../common/error'
 
 class Ctrl {
 	constructor(app) {
@@ -96,7 +97,8 @@ class Ctrl {
 		this.getSessionKey(code)
 			.then(doc => {
 				doc = JSON.parse(doc)
-				if (doc && doc.errmsg) return res.tools.setJson(doc.errcode, doc.errmsg)
+				// bugfix
+				if (doc && doc.errmsg) throw new CustomError(doc.errcode, doc.errmsg) // return res.tools.setJson(doc.errcode, doc.errmsg)
 				if (doc && doc.openid) {
 					body.username = doc.openid // 注意：用户名是openid
 					return this.model.findByName(doc.openid) // 查询用户
@@ -107,7 +109,8 @@ class Ctrl {
 					body.admin = false
 					return this.model.newAndSave(body) // 新建用户
 				}
-				if (doc && doc._id) return res.tools.setJson(1, '用户名已存在')
+				// bugfix
+				if (doc && doc._id)  throw new CustomError('用户名已存在') // res.tools.setJson(1, '用户名已存在')
 			})
 			.then(doc => {
 				if (doc && doc._id) return res.tools.setJson(0, '注册成功', {
@@ -148,7 +151,9 @@ class Ctrl {
 		this.getSessionKey(code)
 			.then(doc => {
 				doc = JSON.parse(doc)
-				if (doc && doc.errmsg) return res.tools.setJson(doc.errcode, doc.errmsg) // 这里按照微信文档，返回40029
+				// 这里按照微信文档，返回40029
+				// bugfix 
+				if (doc && doc.errmsg) throw new CustomError(doc.errcode, doc.errmsg) // return res.tools.setJson(doc.errcode, doc.errmsg)
 				if (doc && doc.openid) return this.model.findByName(doc.openid) // 查询用户，用户名是openid
 			})
 			.then(doc => {
@@ -264,7 +269,8 @@ class Ctrl {
 					username: username,
 					password: res.jwt.setMd5(password)
 				})
-				return res.tools.setJson(1, '用户名已存在')
+				// bugfix
+				throw new CustomError('用户名已存在') // res.tools.setJson(1, '用户名已存在')
 			})
 			.then(doc => res.tools.setJson(0, '注册成功'))
 			.catch(err => next(err))
@@ -389,8 +395,9 @@ class Ctrl {
 		if (oldpwd && newpwd) {
 			this.model.findByName(req.user.username)
 				.then(doc => {
-					if (!doc) return res.tools.setJson(1, '用户不存在或已删除')
-					if (doc.password !== res.jwt.setMd5(oldpwd)) return res.tools.setJson(1, '密码错误')
+					// bugfix 
+					if (!doc) throw new CustomError('用户不存在或已删除') // return res.tools.setJson(1, '用户不存在或已删除')
+					if (doc.password !== res.jwt.setMd5(oldpwd)) throw new CustomError('密码错误') // return res.tools.setJson(1, '密码错误')
 					doc.password = res.jwt.setMd5(newpwd)
 					return doc.save()
 				})
@@ -431,7 +438,8 @@ class Ctrl {
 	saveInfo(req, res, next) {
 		this.model.findByName(req.user.username)
 			.then(doc => {
-				if (!doc) return res.tools.setJson(1, '用户不存在或已删除')
+				// bugfix
+				if (!doc) throw new CustomError('用户不存在或已删除')  // return res.tools.setJson(1, '用户不存在或已删除')
 
 				for (let key in req.body) {
 					doc[key] = req.body[key]

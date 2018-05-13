@@ -1,4 +1,5 @@
 import proxy from '../proxy'
+import CustomError from '../common/error'
 
 class Ctrl{
 	constructor(app) {
@@ -166,6 +167,9 @@ class Ctrl{
 			user: req.user._id, 
 		}
 
+		// 管理员用户逻辑
+		req.user.admin && delete query.user
+
 		const params = {
 			query  : query, 
 			fields : {}, 
@@ -242,7 +246,8 @@ class Ctrl{
 
 		proxy.address.findByIdAsync(body.address_id)
 		.then(doc => {
-			if (!doc) return res.tools.setJson(1, '地址不存在或已删除')
+			// bugfix 
+			if (!doc)  throw new CustomError('地址不存在或已删除')
 			body.recipientName = doc.name
 			body.recipientGender = doc.gender
 			body.recipientTel = doc.tel
@@ -326,6 +331,8 @@ class Ctrl{
 			_id : req.params.id, 
 			user: req.user._id, 
 		}
+		// 管理员用户逻辑
+		req.user.admin && delete query.user
 
 		const body = {
 			title    : req.body.title,
@@ -372,6 +379,9 @@ class Ctrl{
 			_id : req.params.id, 
 			user: req.user._id, 
 		}
+
+		// 管理员用户逻辑
+		req.user.admin && delete query.user
 		
 		this.model.delete(query)
 		.then(doc => {
